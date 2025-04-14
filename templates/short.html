@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>短链接生成器</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --accent-color: #e74c3c;
+            --bg-color: #f9f9f9;
+            --text-color: #333;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        h1 {
+            font-size: 28px;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        h1:after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background-color: var(--primary-color);
+            margin: 8px auto 0;
+            border-radius: 2px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group label {
+            position: absolute;
+            left: 12px;
+            top: -10px;
+            background-color: white;
+            padding: 0 5px;
+            font-size: 12px;
+            color: var(--primary-color);
+        }
+
+        input {
+            padding: 12px 15px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: #f1f1f1;
+            color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #e1e1e1;
+        }
+
+        .result-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .short-url {
+            font-size: 20px;
+            word-break: break-all;
+        }
+
+        .short-url a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .short-url a:hover {
+            text-decoration: underline;
+        }
+
+        .copy-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .success-message {
+            color: #2ecc71;
+            font-size: 14px;
+            margin-top: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .success-message {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>短链接生成器</h1>
+        <form method="POST">
+            <div class="input-group">
+                <label for="long_url">原始链接</label>
+                <input type="url" id="long_url" name="long_url" placeholder="请输入需要缩短的完整URL" required>
+            </div>
+
+            <div class="input-group">
+                <label for="custom_suffix">自定义后缀 (可选)</label>
+                <input type="text" id="custom_suffix" name="custom_suffix" placeholder="自定义短链接后缀，留空则自动生成">
+            </div>
+
+            <button type="submit" class="btn-primary">生成短链接</button>
+        </form>
+
+        {% if short_url %}
+        <div class="result-container">
+            <div class="short-url">
+                <h2>短链接：</h2>
+                <a href="/short/{{ short_url }}" target="_blank" id="short-url-link">
+                    {{ request.host_url }}{{ short_url }}
+                </a>
+            </div>
+
+            <button onclick="copyToClipboard()" class="btn-secondary copy-button">
+                复制链接
+            </button>
+
+            <div id="success-message" class="success-message">链接已复制到剪贴板！</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        async function copyToClipboard() {
+            const shortUrl = "{{ request.host_url }}{{ short_url }}";
+
+
+            try {
+                // 使用现代 Clipboard API
+                if (navigator.clipboard) {
+                    await navigator.clipboard.writeText(shortUrl);
+                    showSuccessMessage();
+                } else {
+                    // 对不支持 Clipboard API 的浏览器使用替代方法
+                    fallbackCopyToClipboard(shortUrl);
+                }
+            } catch (err) {
+                console.error('无法复制内容: ', err);
+                fallbackCopyToClipboard(shortUrl);
+            }
+        }
+
+        function fallbackCopyToClipboard(text) {
+            // 创建一个临时输入元素
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+
+            // 设置样式使其不可见
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+
+            document.body.appendChild(textArea);
+
+            // 检查是否在iOS上
+            const isIos = navigator.userAgent.match(/ipad|iphone/i);
+
+            if (isIos) {
+                // iOS设备需要特殊处理
+                const range = document.createRange();
+                range.selectNodeContents(textArea);
+
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                textArea.setSelectionRange(0, text.length);
+            } else {
+                textArea.focus();
+                textArea.select();
+            }
+
+            // 尝试执行复制命令（虽然已弃用但作为最后的回退方案）
+            let successful = false;
+            try {
+                successful = document.execCommand('copy');
+            } catch (err) {
+                console.error('Fallback: 复制到剪贴板出错', err);
+            }
+
+            document.body.removeChild(textArea);
+
+            if (successful) {
+                showSuccessMessage();
+            } else {
+                // 如果所有方法都失败，提示用户手动复制
+                alert('无法自动复制链接，请手动选择并复制链接: ' + text);
+            }
+        }
+
+        function showSuccessMessage() {
+            const successMsg = document.getElementById('success-message');
+            successMsg.classList.add('show');
+
+            setTimeout(() => {
+                successMsg.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
